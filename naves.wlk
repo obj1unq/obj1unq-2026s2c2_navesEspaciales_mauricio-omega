@@ -1,13 +1,51 @@
-class NaveDeCarga {
-
+/*
+ * justificación:
+ * Creé la superclase abstracta Nave porque NaveDeCarga, NaveDePasajeros y
+ * NaveDeCombate comparten el atributo velocidad y el mensaje recibirAmenaza().
+ * - Evito repetir velocidad en tres clases: queda en un solo lugar, y si
+ *   hay que validar o hacer algo con velocidad, se cambia únicamente en Nave.
+ * - Toda nave tiene velocidad, así que Nave centraliza ese concepto del dominio.
+ * - recibirAmenaza() es abstracto: cada subclase define su propio protocolo.
+ * - El resto del comportamiento (sobrecargada, velocidadMaximaPermitida,
+ *   estaInvisible, etc.) es específico de cada tipo y queda en su clase.
+ */
+class Nave {
 	var property velocidad = 0
+	
+	method recibirAmenaza()
+	
+	method propulsar() {
+		self.aumentarVelocidad(self.aumentoVelocidadDePropulsion())
+	}
+	
+	method prepararParaViajar() {
+		self.aumentarVelocidad(self.aumentoVelocidadParaViajar())
+	}
+	
+	method aumentarVelocidad(incremento) {
+		velocidad += incremento.min((self.maximaVelocidadAlcanzable() - velocidad).max(0))
+	}
+	
+	method aumentoVelocidadDePropulsion() = 20000
+	method aumentoVelocidadParaViajar() = 15000
+	method maximaVelocidadAlcanzable() = 300000
+	
+	method encontrarseConUnEnemigo(){
+		self.recibirAmenaza()
+		self.propulsar()
+	}
+}
+
+
+class NaveDeCarga inherits Nave{
+
 	var property carga = 0
 
 	method sobrecargada() = carga > 100000
 
 	method excedidaDeVelocidad() = velocidad > 100000
 
-	method recibirAmenaza() {
+	override method recibirAmenaza() {
 		carga = 0
 	}
 	
@@ -21,9 +59,22 @@ class NaveDeCarga {
 
 }
 
-class NaveDePasajeros {
+class NaveDeResiduoRadioactivo inherits NaveDeCarga {
 
-	var property velocidad = 0
+	var property selladoAlVacio = false
+
+	override method recibirAmenaza() {
+		velocidad = 0
+	}
+	
+	override method prepararParaViajar() {
+		selladoAlVacio = true
+		super()
+	}
+}
+
+class NaveDePasajeros inherits Nave{
+
 	var property alarma = false
 	const cantidadDePasajeros = 0
 
@@ -33,14 +84,14 @@ class NaveDePasajeros {
 
 	method estaEnPeligro() = velocidad > self.velocidadMaximaPermitida() or alarma
 
-	method recibirAmenaza() {
+	override method recibirAmenaza() {
 		alarma = true
 	}
 
 }
 
-class NaveDeCombate {
-	var property velocidad = 0
+class NaveDeCombate inherits Nave {
+
 	var property modo = reposo
 	const property mensajesEmitidos = []
 
@@ -52,10 +103,14 @@ class NaveDeCombate {
 
 	method estaInvisible() = velocidad < 10000 and modo.invisible()
 
-	method recibirAmenaza() {
+	override method recibirAmenaza() {
 		modo.recibirAmenaza(self)
 	}
 
+	override method prepararParaViajar() {
+		modo.prepararParaViajar(self)
+		super()
+	}
 }
 
 object reposo {
@@ -65,7 +120,11 @@ object reposo {
 	method recibirAmenaza(nave) {
 		nave.emitirMensaje("¡RETIRADA!")
 	}
-
+	
+	method prepararParaViajar(nave) {
+		nave.emitirMensaje("Saliendo en misión")
+		nave.modo(ataque)
+	}
 }
 
 object ataque {
@@ -75,5 +134,8 @@ object ataque {
 	method recibirAmenaza(nave) {
 		nave.emitirMensaje("Enemigo encontrado")
 	}
-
+	
+	method prepararParaViajar(nave) {
+		nave.emitirMensaje("Volviendo a la base")
+	}
 }
